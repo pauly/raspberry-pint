@@ -6,8 +6,6 @@ class OneWire
   @logFile = nil
 
   def initialize options = { }
-    `sudo modprobe w1-gpio` # @todo move this to install instructions / readme
-    `sudo modprobe w1-gpio` # @todo move this to install instructions / readme
     @deviceRoot = '/sys/bus/w1/devices/'
     if options[ :deviceRoot ]
       @deviceRoot = options[ :deviceRoot ]
