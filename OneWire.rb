@@ -1,12 +1,17 @@
+# @todo put this in a gem
+
 class OneWire
 
   @deviceRoot = nil
   @logFile = nil
 
   def initialize options = { }
-    `sudo modprobe w1-gpio`
-    `sudo modprobe w1-gpio`
+    `sudo modprobe w1-gpio` # @todo move this to install instructions / readme
+    `sudo modprobe w1-gpio` # @todo move this to install instructions / readme
     @deviceRoot = '/sys/bus/w1/devices/'
+    if options[ :deviceRoot ]
+      @deviceRoot = options[ :deviceRoot ]
+    end
     @logFile = '/tmp/temperature.log'
     if options[ :logDir ]
       @logFile = options[ :logDir ] + '/temperature.log'
@@ -15,14 +20,11 @@ class OneWire
 
   def read
     data = { }
-    puts 'read, ' + @deviceRoot
     Dir[ @deviceRoot + '*-*' ].each_with_index do | path, i |
       id = path.sub @deviceRoot, ''
       file_contents = File.read( path + '/w1_slave' )
-      data[ id ] = file_contents.split( 't=' ).last
-      data[ id ] = data[ id ].to_f / 1000
+      data[ id ] = file_contents.split( 't=' ).last.to_f / 1000
     end
-    puts 'so data is ' + data.inspect
     data
   end
 
@@ -41,14 +43,40 @@ class OneWire
     self.read.each { | reading |
       data[0].push reading.first # the id
     }
-    puts 'so far graph data is ' + data.inspect
     open( @logFile, 'r' ) do | f |
       f.each_line do | line |
 	data.push line.strip.split( "\t" )
       end
     end
-    puts 'now graph data is ' + data.inspect
     data
+  end
+
+  def graph intro = ''
+    data = self.readLog
+    data = data.inspect.to_s.gsub /"([\d.]+)"/, '\1'
+    data = data.gsub /\[([\d]+)/, '[d(\1)'
+    html = <<-eos
+      <div id="curveChart" style="width: 800px; height: 600px"></div>
+      #{intro}
+      <script type="text/javascript" src="https://www.google.com/jsapi?autoload={ 'modules':[{ 'name':'visualization', 'version':'1', 'packages':['corechart'] }] }"></script>
+      <script type="text/javascript">
+	var drawChart = function ( ) {
+	  var d = function ( t ) {
+	    return new Date( t * 1000 );
+	  };
+	  var data = google.visualization.arrayToDataTable( #{data} );
+	  var options = {
+	    title: 'Beer temperatures',
+	    curveType: 'function',
+	    legend: { position: 'bottom' }
+	  };
+	  var chart = new google.visualization.LineChart( document.getElementById( 'curveChart' ));
+	  chart.draw( data, options );
+	};
+	google.setOnLoadCallback( drawChart );
+      </script>
+    eos
+    html.strip.gsub /[\n\r]/, ' '
   end
 
 end
