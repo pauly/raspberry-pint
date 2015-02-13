@@ -4,6 +4,7 @@ class OneWire
 
   @deviceRoot = nil
   @logFile = nil
+  @maxLogEntries = nil
 
   def initialize options = { }
     @deviceRoot = '/sys/bus/w1/devices/'
@@ -13,6 +14,10 @@ class OneWire
     @logFile = '/tmp/temperature.log'
     if options[ :logDir ]
       @logFile = options[ :logDir ] + '/temperature.log'
+    end
+    @maxLogEntries = 1000
+    if options[ :maxLogEntries ]
+      @maxLogEntries = options[ :maxLogEntries ]
     end
   end
 
@@ -37,15 +42,18 @@ class OneWire
   end
 
   def readLog
-    data = [ [ 'time' ] ]
+    header = [ 'time' ]
+    data = [ ]
     self.read.each { | reading |
-      data[0].push reading.first # the id
+      header.push reading.first # the id
     }
     open( @logFile, 'r' ) do | f |
       f.each_line do | line |
 	data.push line.strip.split( "\t" )
       end
     end
+    data = data[ @maxLogEntries * -1, @maxLogEntries ]
+    data.unshift header
     data
   end
 
@@ -74,7 +82,7 @@ class OneWire
 	google.setOnLoadCallback( drawChart );
       </script>
     eos
-    html.strip.gsub /[\n\r]/, ' '
+    html.strip.gsub /[\n\r\s]+/, ' '
   end
 
 end
