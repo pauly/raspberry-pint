@@ -1,4 +1,4 @@
-# @todo put this in a gem
+# depracated renamed to raspbrewery
 
 class OneWire
 
